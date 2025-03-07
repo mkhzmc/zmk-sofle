@@ -181,7 +181,7 @@ static void draw_bottom(lv_obj_t *widget, lv_color_t cbuf[],
   lv_draw_rect_dsc_t rect_black_dsc;
   init_rect_dsc(&rect_black_dsc, LVGL_BACKGROUND);
   lv_draw_label_dsc_t label_dsc;
-  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_14,
+  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_16,
                  LV_TEXT_ALIGN_CENTER);
 
   // Fill background
