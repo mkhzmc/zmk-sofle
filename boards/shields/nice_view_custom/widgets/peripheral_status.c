@@ -27,8 +27,6 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/usb.h>
 #include <zmk/wpm.h>
 
-#include "peripheral_status.h"
-
 LV_IMG_DECLARE(corro01);
 LV_IMG_DECLARE(corro02);
 LV_IMG_DECLARE(corro03);
