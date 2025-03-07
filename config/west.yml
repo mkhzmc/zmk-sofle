@@ -10,16 +10,21 @@ manifest:
       url-base: https://github.com/GPeye
     - name: dsifry #new entry
       url-base: https://github.com/dsifry #new entry
+    - name: mkhzmc
+      url-base: https://github.com/mkhzmc
   projects:
-    - name: eyelash_sofle
-      url: https://github.com/a741725193/zmk-sofle
-      revision: refactor
+      #- name: eyelash_sofle
+      #url: https://github.com/a741725193/zmk-sofle
+      #revision: refactor
       #- name: mario-peripheral-animation
       #remote: gpeye
       #revision: main 
-    - name: nice-view-mod #new entry
-      remote: dsifry #new entry
-      revision: main #new entry
+      #- name: nice-view-mod #new entry
+      #remote: dsifry #new entry
+      #revision: main #new entry
+    - name: zmk-sofle
+      remote: mkhzmc
+      revision: main
     - name: zmk
       remote: zmkfirmware
       revision: main
