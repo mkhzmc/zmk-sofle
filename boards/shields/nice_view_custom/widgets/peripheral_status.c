@@ -5,8 +5,8 @@
  *
  */
 
+#include <zephyr/device.h>
 #include <zephyr/kernel.h>
-#include <zephyr/random/random.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -22,11 +22,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/ble_active_profile_changed.h>
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/events/layer_state_changed.h>
-#include <zmk/events/split_peripheral_status_changed.h>
+#include <zmk/events/position_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/events/wpm_state_changed.h>
 #include <zmk/keymap.h>
-#include <zmk/split/bluetooth/peripheral.h>
 #include <zmk/usb.h>
 #include <zmk/wpm.h>
 
@@ -82,7 +81,7 @@ static uint32_t random_seed =
 
 static uint32_t last_wpm_update = 0;
 static const uint32_t WPM_UPDATE_INTERVAL =
-    1000; // Update WPM every 1000ms (1 second)
+    500; // Update WPM every 1000ms (1 second)
 
 static struct k_work_delayable animation_work;
 
@@ -399,13 +398,6 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status,
                             struct peripheral_status_state,
                             output_status_update_cb, get_state)
 ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
-
-#if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
-#endif
-#if defined(CONFIG_ZMK_BLE)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
-#endif
 
 static void set_wpm_status(struct zmk_widget_status *widget,
                            struct wpm_status_state state) {
