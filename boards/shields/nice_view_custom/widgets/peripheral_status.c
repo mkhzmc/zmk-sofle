@@ -6,6 +6,7 @@
  */
 
 #include <zephyr/kernel.h>
+#include <zephyr/random/random.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -26,6 +27,38 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/usb.h>
 #include <zmk/wpm.h>
 
+#include "peripheral_status.h"
+
+LV_IMG_DECLARE(corro01);
+LV_IMG_DECLARE(corro02);
+LV_IMG_DECLARE(corro03);
+LV_IMG_DECLARE(corro04);
+LV_IMG_DECLARE(corro05);
+LV_IMG_DECLARE(corro06);
+LV_IMG_DECLARE(corro07);
+LV_IMG_DECLARE(corro08);
+LV_IMG_DECLARE(corro09);
+LV_IMG_DECLARE(corro10);
+LV_IMG_DECLARE(corro11);
+LV_IMG_DECLARE(corro12);
+
+const lv_img_dsc_t *anim_imgs[] = {
+    &corro01, &corro02, &corro03, &corro04, &corro05, &corro06,
+    &corro07, &corro08, &corro09, &corro10, &corro11, &corro12,
+};
+
+static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
+
+// Define wpm_status_state before its first use
+struct wpm_status_state {
+  uint8_t wpm;              // Current WPM
+  uint8_t wpm_history[10];  // Historical WPM values
+  uint8_t animation_state;  // Current animation state
+  bool key_pressed;         // Keypress state
+  bool is_key_event;        // Flag for key events
+  bool is_animation_update; // Flag for animation updates
+};
+
 static sys_slist_t widgets = SYS_SLIST_STATIC_INIT(&widgets);
 
 struct output_status_state {
@@ -40,9 +73,67 @@ struct layer_status_state {
   const char *label;
 };
 
-struct wpm_status_state {
-  uint8_t wpm;
+enum anim_state {
+  ANIM_STATE_CASUAL,
+  ANIM_STATE_FRENZIED
+} current_anim_state = ANIM_STATE_CASUAL;
+
+enum idle_anim_state {
+  IDLE_INHALE,
+  IDLE_REST1,
+  IDLE_EXHALE,
+  IDLE_REST2
+} current_idle_state = IDLE_INHALE;
+
+struct peripheral_status_state {
+  bool connected;
 };
+
+static uint32_t last_idle_update = 0;
+static const uint32_t IDLE_ANIMATION_INTERVAL =
+    750; // 750ms between idle animation frames
+
+static int32_t breathing_interval_adjustment = 0;
+static bool leaving_furious = false;
+
+static uint32_t random_seed =
+    7919; // Will be initialized with time on first use
+
+static uint32_t last_wpm_update = 0;
+static const uint32_t WPM_UPDATE_INTERVAL =
+    1000; // Update WPM every 1000ms (1 second)
+
+static struct k_work_delayable animation_work;
+
+static int32_t get_random_adjustment(void) {
+  // Initialize seed with time on first call
+  static bool seed_initialized = false;
+  if (!seed_initialized) {
+    random_seed = random_seed ^ k_uptime_get_32();
+    seed_initialized = true;
+  }
+
+  random_seed = random_seed * 1103515245 + 12345;
+  return ((random_seed / 65536) % 501) - 250;
+}
+
+LV_IMG_DECLARE(bongocatrest0);
+LV_IMG_DECLARE(bongocatcasual1);
+LV_IMG_DECLARE(bongocatcasual2);
+LV_IMG_DECLARE(bongocatfast1);
+LV_IMG_DECLARE(bongocatfast2);
+LV_IMG_DECLARE(bongo_resting);
+LV_IMG_DECLARE(bongo_casualright);
+LV_IMG_DECLARE(bongo_casualleft);
+LV_IMG_DECLARE(bongo_furiousup);
+LV_IMG_DECLARE(bongo_furiousdown);
+LV_IMG_DECLARE(bongo_inhale);
+LV_IMG_DECLARE(bongo_exhale);
+
+static bool key_pressed = false;
+static bool key_released = false;
+static bool use_first_frame =
+    true; // Track which frame to use in the animation sequence
 
 static void draw_top(lv_obj_t *widget, lv_color_t cbuf[],
                      const struct status_state *state) {
@@ -138,37 +229,104 @@ static void draw_middle(lv_obj_t *widget, lv_color_t cbuf[],
   lv_draw_arc_dsc_t arc_dsc_filled;
   init_arc_dsc(&arc_dsc_filled, LVGL_FOREGROUND, 9);
   lv_draw_label_dsc_t label_dsc;
-  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_16,
+  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_18,
                  LV_TEXT_ALIGN_CENTER);
   lv_draw_label_dsc_t label_dsc_black;
-  init_label_dsc(&label_dsc_black, LVGL_BACKGROUND, &lv_font_montserrat_16,
+  init_label_dsc(&label_dsc_black, LVGL_BACKGROUND, &lv_font_montserrat_18,
                  LV_TEXT_ALIGN_CENTER);
+  lv_draw_line_dsc_t line_dsc;
+  init_line_dsc(&line_dsc, LVGL_FOREGROUND, 1);
 
   // Fill background
   lv_canvas_draw_rect(canvas, 0, 0, CANVAS_SIZE, CANVAS_SIZE, &rect_black_dsc);
 
-  // Draw circles
-  int circle_offsets[5][2] = {
-      {13, 13}, {55, 13}, {34, 34}, {13, 55}, {55, 55},
-  };
+  // Draw single BLE profile circle at the top
+  bool selected = true;
+  int x = 34, y = 13;
 
-  for (int i = 0; i < 5; i++) {
-    bool selected = i == state->active_profile_index;
+  lv_canvas_draw_arc(canvas, x, y, 13, 0, 360, &arc_dsc);
 
-    lv_canvas_draw_arc(canvas, circle_offsets[i][0], circle_offsets[i][1], 13,
-                       0, 360, &arc_dsc);
-
-    if (selected) {
-      lv_canvas_draw_arc(canvas, circle_offsets[i][0], circle_offsets[i][1], 9,
-                         0, 359, &arc_dsc_filled);
-    }
-
-    char label[2];
-    snprintf(label, sizeof(label), "%d", i + 1);
-    lv_canvas_draw_text(canvas, circle_offsets[i][0] - 8,
-                        circle_offsets[i][1] - 10, 16,
-                        (selected ? &label_dsc_black : &label_dsc), label);
+  if (selected) {
+    lv_canvas_draw_arc(canvas, x, y, 9, 0, 359, &arc_dsc_filled);
   }
+
+  char label[2];
+  snprintf(label, sizeof(label), "%d", state->active_profile_index + 1);
+  lv_canvas_draw_text(canvas, x - 8, y - 10, 16,
+                      (selected ? &label_dsc_black : &label_dsc), label);
+
+  // Calculate average WPM over last 5 seconds
+  int recent_wpm = 0;
+  for (int i = 5; i < 10; i++) {
+    recent_wpm += state->wpm[i];
+  }
+  recent_wpm /= 5;
+
+  // Update animation state based on WPM
+  if (recent_wpm > 30) {
+    current_anim_state = ANIM_STATE_FRENZIED;
+    leaving_furious = false;
+  } else if (current_anim_state == ANIM_STATE_FRENZIED) {
+    // We're leaving furious mode
+    current_anim_state = ANIM_STATE_CASUAL;
+    leaving_furious = true;
+    current_idle_state = IDLE_EXHALE;
+    last_idle_update = k_uptime_get_32();
+  }
+
+  // Determine which animation frame to use
+  const lv_img_dsc_t *current_frame;
+
+  if (current_anim_state == ANIM_STATE_CASUAL) {
+    if (key_pressed) {
+      // Show alternating left/right frames on press
+      current_frame = use_first_frame ? &bongo_casualright : &bongo_casualleft;
+    } else if (key_released) {
+      // Always show resting frame on release
+      current_frame = &bongo_resting;
+      // Toggle frame choice for next press
+      use_first_frame = !use_first_frame;
+
+      // Reset breathing cycle to start with inhale after typing
+      current_idle_state = IDLE_INHALE;
+      last_idle_update = k_uptime_get_32();
+    } else {
+      // Handle idle animation based on current state
+      switch (current_idle_state) {
+      case IDLE_INHALE:
+        current_frame = &bongo_inhale;
+        break;
+      case IDLE_REST1:
+        current_frame = &bongo_resting;
+        break;
+      case IDLE_EXHALE:
+        current_frame = &bongo_exhale;
+        break;
+      case IDLE_REST2:
+        current_frame = &bongo_resting;
+        break;
+      }
+    }
+  } else { // ANIM_STATE_FRENZIED
+    // Keep existing furious animation logic
+    if (key_pressed || key_released) {
+      current_frame = use_first_frame ? &bongo_furiousup : &bongo_furiousdown;
+      use_first_frame = !use_first_frame;
+    } else {
+      current_frame = &bongo_resting;
+    }
+  }
+
+  // Reset key_released flag after handling
+  key_released = false;
+
+  // Draw bongo cat animation frame
+  lv_canvas_draw_rect(canvas, 0, 28, 68, 40, &rect_white_dsc);
+  lv_canvas_draw_rect(canvas, 1, 29, 66, 38, &rect_black_dsc);
+
+  lv_draw_img_dsc_t img_dsc;
+  lv_draw_img_dsc_init(&img_dsc);
+  lv_canvas_draw_img(canvas, 0, 28, current_frame, &img_dsc);
 
   // Rotate canvas
   rotate_canvas(canvas, cbuf);
@@ -181,7 +339,7 @@ static void draw_bottom(lv_obj_t *widget, lv_color_t cbuf[],
   lv_draw_rect_dsc_t rect_black_dsc;
   init_rect_dsc(&rect_black_dsc, LVGL_BACKGROUND);
   lv_draw_label_dsc_t label_dsc;
-  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_16,
+  init_label_dsc(&label_dsc, LVGL_FOREGROUND, &lv_font_montserrat_14,
                  LV_TEXT_ALIGN_CENTER);
 
   // Fill background
@@ -197,7 +355,6 @@ static void draw_bottom(lv_obj_t *widget, lv_color_t cbuf[],
   } else {
     lv_canvas_draw_text(canvas, 0, 5, 68, &label_dsc, state->layer_label);
   }
-
   // Rotate canvas
   rotate_canvas(canvas, cbuf);
 }
@@ -222,11 +379,8 @@ static void battery_status_update_cb(struct battery_status_state state) {
 
 static struct battery_status_state
 battery_status_get_state(const zmk_event_t *eh) {
-  const struct zmk_battery_state_changed *ev = as_zmk_battery_state_changed(eh);
-
   return (struct battery_status_state){
-      .level =
-          (ev != NULL) ? ev->state_of_charge : zmk_battery_state_of_charge(),
+      .level = zmk_battery_state_of_charge(),
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
       .usb_present = zmk_usb_is_powered(),
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
@@ -241,37 +395,29 @@ ZMK_SUBSCRIPTION(widget_battery_status, zmk_battery_state_changed);
 ZMK_SUBSCRIPTION(widget_battery_status, zmk_usb_conn_state_changed);
 #endif /* IS_ENABLED(CONFIG_USB_DEVICE_STACK) */
 
-static void set_output_status(struct zmk_widget_status *widget,
-                              const struct output_status_state *state) {
-  widget->state.selected_endpoint = state->selected_endpoint;
-  widget->state.active_profile_index = state->active_profile_index;
-  widget->state.active_profile_connected = state->active_profile_connected;
-  widget->state.active_profile_bonded = state->active_profile_bonded;
-
-  draw_top(widget->obj, widget->cbuf, &widget->state);
-  draw_middle(widget->obj, widget->cbuf2, &widget->state);
+static struct peripheral_status_state get_state(const zmk_event_t *_eh) {
+  return (struct peripheral_status_state){
+      .connected = zmk_split_bt_peripheral_is_connected()};
 }
 
-static void output_status_update_cb(struct output_status_state state) {
+static void set_connection_status(struct zmk_widget_status *widget,
+                                  struct peripheral_status_state state) {
+  widget->state.connected = state.connected;
+
+  draw_top(widget->obj, widget->cbuf, &widget->state);
+}
+
+static void output_status_update_cb(struct peripheral_status_state state) {
   struct zmk_widget_status *widget;
   SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
-    set_output_status(widget, &state);
+    set_connection_status(widget, state);
   }
 }
 
-static struct output_status_state
-output_status_get_state(const zmk_event_t *_eh) {
-  return (struct output_status_state){
-      .selected_endpoint = zmk_endpoints_selected(),
-      .active_profile_index = zmk_ble_active_profile_index(),
-      .active_profile_connected = zmk_ble_active_profile_is_connected(),
-      .active_profile_bonded = !zmk_ble_active_profile_is_open(),
-  };
-}
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state,
-                            output_status_update_cb, output_status_get_state)
-ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
+ZMK_DISPLAY_WIDGET_LISTENER(widget_peripheral_status,
+                            struct peripheral_status_state,
+                            output_status_update_cb, get_state)
+ZMK_SUBSCRIPTION(widget_peripheral_status, zmk_split_peripheral_status_changed);
 
 #if IS_ENABLED(CONFIG_USB_DEVICE_STACK)
 ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
@@ -280,40 +426,36 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
 ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
 #endif
 
-static void set_layer_status(struct zmk_widget_status *widget,
-                             struct layer_status_state state) {
-  widget->state.layer_index = state.index;
-  widget->state.layer_label = state.label;
-
-  draw_bottom(widget->obj, widget->cbuf3, &widget->state);
-}
-
-static void layer_status_update_cb(struct layer_status_state state) {
-  struct zmk_widget_status *widget;
-  SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
-    set_layer_status(widget, state);
-  }
-}
-
-static struct layer_status_state layer_status_get_state(const zmk_event_t *eh) {
-  uint8_t index = zmk_keymap_highest_layer_active();
-  return (struct layer_status_state){.index = index,
-                                     .label = zmk_keymap_layer_name(index)};
-}
-
-ZMK_DISPLAY_WIDGET_LISTENER(widget_layer_status, struct layer_status_state,
-                            layer_status_update_cb, layer_status_get_state)
-
-ZMK_SUBSCRIPTION(widget_layer_status, zmk_layer_state_changed);
-
 static void set_wpm_status(struct zmk_widget_status *widget,
                            struct wpm_status_state state) {
-  for (int i = 0; i < 9; i++) {
-    widget->state.wpm[i] = widget->state.wpm[i + 1];
-  }
-  widget->state.wpm[9] = state.wpm;
+  uint32_t current_time = k_uptime_get_32();
+  bool is_animation_update = state.is_animation_update;
 
-  draw_top(widget->obj, widget->cbuf, &widget->state);
+  // Only update WPM array on the second, unless this is an animation update
+  if (!is_animation_update &&
+      (current_time - last_wpm_update >= WPM_UPDATE_INTERVAL)) {
+    // Update WPM array
+    for (int i = 0; i < 9; i++) {
+      widget->state.wpm[i] = widget->state.wpm[i + 1];
+    }
+    widget->state.wpm[9] = state.wpm;
+    last_wpm_update = current_time;
+
+    // Update top display with new WPM data
+    draw_top(widget->obj, widget->cbuf, &widget->state);
+  }
+
+  // Only update key states if this was triggered by a key event
+  if (state.is_key_event) {
+    key_pressed = state.key_pressed;
+    key_released = !state.key_pressed;
+
+    // Force redraw on every key event
+    draw_middle(widget->obj, widget->cbuf2, &widget->state);
+  } else if (is_animation_update) {
+    // This is an animation update, just redraw the middle section
+    draw_middle(widget->obj, widget->cbuf2, &widget->state);
+  }
 }
 
 static void wpm_status_update_cb(struct wpm_status_state state) {
@@ -324,12 +466,118 @@ static void wpm_status_update_cb(struct wpm_status_state state) {
 }
 
 struct wpm_status_state wpm_status_get_state(const zmk_event_t *eh) {
-  return (struct wpm_status_state){.wpm = zmk_wpm_get_state()};
-};
+  static uint8_t wpm_history[10] = {0}; // Keep track of history between calls
+  static uint8_t current_wpm = 0; // Keep track of current WPM between calls
+
+  const struct zmk_wpm_state_changed *wpm_ev = as_zmk_wpm_state_changed(eh);
+  const struct zmk_position_state_changed *pos_ev =
+      as_zmk_position_state_changed(eh);
+
+  bool is_animation_update = false;
+  bool is_key_event = false;
+
+  // Update WPM if this is a WPM event
+  if (wpm_ev != NULL) {
+    current_wpm = wpm_ev->state;
+
+    // Check if this is an animation update
+    if (k_uptime_get_32() - last_wpm_update < WPM_UPDATE_INTERVAL) {
+      is_animation_update = true;
+    }
+
+    // Only update history if this isn't an animation update
+    if (!is_animation_update) {
+      for (int i = 0; i < 9; i++) {
+        wpm_history[i] = wpm_history[i + 1];
+      }
+      wpm_history[9] = current_wpm;
+    }
+  }
+
+  // Update key state if this is a position event
+  if (pos_ev != NULL) {
+    is_key_event = true;
+    if (pos_ev->state > 0) {
+      key_pressed = true;
+      key_released = false;
+    } else {
+      key_pressed = false;
+      key_released = true;
+    }
+  }
+
+  return (struct wpm_status_state){
+      .wpm = current_wpm,
+      .wpm_history = {wpm_history[0], wpm_history[1], wpm_history[2],
+                      wpm_history[3], wpm_history[4], wpm_history[5],
+                      wpm_history[6], wpm_history[7], wpm_history[8],
+                      wpm_history[9]},
+      .animation_state = current_anim_state,
+      .key_pressed = key_pressed,
+      .is_key_event = is_key_event,
+      .is_animation_update = is_animation_update // Add this to the struct
+  };
+}
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_wpm_status, struct wpm_status_state,
                             wpm_status_update_cb, wpm_status_get_state)
 ZMK_SUBSCRIPTION(widget_wpm_status, zmk_wpm_state_changed);
+ZMK_SUBSCRIPTION(widget_wpm_status, zmk_position_state_changed);
+
+static void animation_work_handler(struct k_work *work) {
+  uint32_t current_time = k_uptime_get_32();
+
+  // Add check for timeout in furious mode
+  if (current_anim_state == ANIM_STATE_FRENZIED &&
+      (current_time - last_wpm_update >
+       WPM_UPDATE_INTERVAL * 2)) { // No typing for 2 seconds
+    current_anim_state = ANIM_STATE_CASUAL;
+    current_idle_state = IDLE_INHALE;
+    last_idle_update = current_time;
+    breathing_interval_adjustment = get_random_adjustment();
+  }
+
+  // Only update animation if enough time has passed
+  if (current_time - last_idle_update > IDLE_ANIMATION_INTERVAL) {
+    last_idle_update = current_time;
+
+    // Progress animation state
+    switch (current_idle_state) {
+    case IDLE_INHALE:
+      current_idle_state = IDLE_REST1;
+      break;
+    case IDLE_REST1:
+      current_idle_state = IDLE_EXHALE;
+      break;
+    case IDLE_EXHALE:
+      current_idle_state = IDLE_REST2;
+      if (leaving_furious) {
+        leaving_furious = false;
+      }
+      break;
+    case IDLE_REST2:
+      current_idle_state = IDLE_INHALE;
+      // Get random adjustment for next breathing cycle
+      if (!leaving_furious) {
+        breathing_interval_adjustment = get_random_adjustment();
+      }
+      break;
+    }
+
+    // Trigger redraw
+    struct zmk_widget_status *widget;
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) {
+      draw_middle(widget->obj, widget->cbuf2, &widget->state);
+    }
+  }
+
+  // Schedule next check
+  uint32_t next_interval = IDLE_ANIMATION_INTERVAL;
+  if (current_idle_state == IDLE_INHALE) {
+    next_interval += breathing_interval_adjustment;
+  }
+  k_work_schedule(&animation_work, K_MSEC(next_interval / 2));
+}
 
 int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
   widget->obj = lv_obj_create(parent);
@@ -350,8 +598,11 @@ int zmk_widget_status_init(struct zmk_widget_status *widget, lv_obj_t *parent) {
   sys_slist_append(&widgets, &widget->node);
   widget_battery_status_init();
   widget_output_status_init();
-  widget_layer_status_init();
   widget_wpm_status_init();
+
+  // Initialize and start the animation timer
+  k_work_init_delayable(&animation_work, animation_work_handler);
+  k_work_schedule(&animation_work, K_MSEC(IDLE_ANIMATION_INTERVAL));
 
   return 0;
 }
