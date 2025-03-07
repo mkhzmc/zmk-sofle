@@ -89,6 +89,7 @@
         cf9 {
             bindings = <&kp F9>;
             key-positions = <10 23>;
+            layers = <0>;
         };
 
         cf10 {
