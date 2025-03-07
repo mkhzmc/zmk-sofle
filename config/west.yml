@@ -25,9 +25,9 @@ manifest:
     - name: nice-view-bongocat
       remote: mkhzmc
       revision: main
-    - name: zmk-sofle
-      remote: mkhzmc
-      revision: main
+      #- name: zmk-sofle
+      #remote: mkhzmc
+      #revision: main
     - name: zmk
       remote: zmkfirmware
       revision: main
