@@ -1,5 +1,5 @@
 layers:
-  LAYER0:
+  '0':
   - $$mdi:keyboard-esc$$
   - {t: '1', s: '!'}
   - {t: '2', s: '@'}
@@ -56,15 +56,15 @@ layers:
   - $$mdi:apple-keyboard-control$$
   - $$mdi:apple-keyboard-command$$
   - $$mdi:apple-keyboard-option$$
-  - layer1
+  - '1'
   - $$mdi:keyboard-space$$
   - {t: '$$mdi:keyboard-return$$', type: enter}
   - $$mdi:keyboard-space$$
-  - {t: '$$mdi:keyboard-return$$', type: enter}
   - '2'
+  - {t: '$$mdi:keyboard-return$$', type: enter}
   - $$mdi:apple-keyboard-shift$$
   - $$mdi:backspace-reverse-outline$$
-  layer1:
+  '1':
   - {t: '`', s: '~'}
   - F1
   - F2
@@ -190,8 +190,8 @@ layers:
   - {t: '$$mdi:transfer$$', type: trans}
   - $$mdi:mouse-left-click-outline$$
   - {t: '$$mdi:transfer$$', type: trans}
-  - {t: '$$mdi:transfer$$', type: trans}
   - {type: held}
+  - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   '3':
@@ -259,3 +259,39 @@ layers:
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
   - {t: '$$mdi:transfer$$', type: trans}
+combos:
+- p: [1, 14]
+  k: F1
+  l: ['0']
+- p: [15, 2]
+  k: F2
+  l: ['0']
+- p: [16, 3]
+  k: F3
+  l: ['0']
+- p: [4, 17]
+  k: F4
+  l: ['0']
+- p: [5, 18]
+  k: F5
+  l: ['0']
+- p: [20, 7]
+  k: F6
+  l: ['0']
+- p: [8, 21]
+  k: F7
+  l: ['0']
+- p: [9, 22]
+  k: F8
+  l: ['0']
+- p: [10, 23]
+  k: F9
+- p: [11, 24]
+  k: F10
+  l: ['0']
+- p: [0, 13]
+  k: F11
+  l: ['0']
+- p: [12, 25]
+  k: F12
+  l: ['0']
