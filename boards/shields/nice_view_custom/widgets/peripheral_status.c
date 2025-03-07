@@ -11,6 +11,7 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
+#include "bongocatart.h"
 #include "status.h"
 #include <zmk/battery.h>
 #include <zmk/ble.h>
