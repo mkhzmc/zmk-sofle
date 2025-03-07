@@ -22,6 +22,9 @@ manifest:
       #- name: nice-view-mod #new entry
       #remote: dsifry #new entry
       #revision: main #new entry
+    - name: nice-view-bongocat
+      remote: mkhzmc
+      revision: main
     - name: zmk-sofle
       remote: mkhzmc
       revision: main
