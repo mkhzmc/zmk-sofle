@@ -1,5 +1,8 @@
 Customized from [a741725193/zmk-sofle](https://github.com/a741725193/zmk-sofle)
-Animation from [dsifry/nice-view-mod](https://github.com/dsifry/nice-view-mod)
+
+Main side animation from [dsifry/nice-view-mod](https://github.com/dsifry/nice-view-mod)
+
+Peripheral side illustraion from [me](https://github.com/mkhzmc)
 
 # Keymap
 
