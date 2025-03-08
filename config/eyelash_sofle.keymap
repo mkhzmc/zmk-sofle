@@ -109,6 +109,30 @@
             key-positions = <12 25>;
             layers = <0>;
         };
+
+        cminus {
+            bindings = <&kp MINUS>;
+            key-positions = <23 24>;
+            layers = <0>;
+        };
+
+        cequal {
+            bindings = <&kp EQUAL>;
+            key-positions = <24 24 24 25>;
+            layers = <0>;
+        };
+
+        cleftbracket {
+            bindings = <&kp LEFT_BRACKET>;
+            key-positions = <36 37>;
+            layers = <0>;
+        };
+
+        crightbracket {
+            bindings = <&kp RIGHT_BRACKET>;
+            key-positions = <37 38>;
+            layers = <0>;
+        };
     };
 
     behaviors {
@@ -128,6 +152,7 @@
 
             sensor-bindings = <&inc_dec_kp C_VOLUME_UP C_VOL_DN>;
             display-name = "0";
+            label = "0";
         };
 
         layer_1 {
@@ -141,6 +166,7 @@
 
             display-name = "1";
             sensor-bindings = <&scroll_encoder>;
+            label = "1";
         };
 
         layer_2 {
@@ -153,6 +179,7 @@
             >;
 
             sensor-bindings = <&scroll_encoder>;
+            label = "2";
         };
 
         layer_3 {
@@ -165,6 +192,7 @@
             >;
 
             sensor-bindings = <&inc_dec_kp C_BRIGHTNESS_INC C_BRIGHTNESS_DEC>;
+            label = "3";
         };
     };
 };
