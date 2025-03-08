@@ -118,7 +118,7 @@
 
         cequal {
             bindings = <&kp EQUAL>;
-            key-positions = <24 24 24 25>;
+            key-positions = <24 25>;
             layers = <0>;
         };
 
