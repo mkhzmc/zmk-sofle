@@ -151,6 +151,12 @@
             key-positions = <16 15>;
             layers = <3>;
         };
+
+        cca {
+            bindings = <&kp LC(RIGHT_ALT)>;
+            key-positions = <53 63>;
+            layers = <0>;
+        };
     };
 
     behaviors {
