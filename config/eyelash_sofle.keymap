@@ -133,6 +133,12 @@
             key-positions = <37 38>;
             layers = <0>;
         };
+
+        cgrave {
+            bindings = <&kp GRAVE>;
+            key-positions = <13 14>;
+            layers = <0>;
+        };
     };
 
     behaviors {
