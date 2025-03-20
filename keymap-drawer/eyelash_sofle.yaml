@@ -318,3 +318,6 @@ combos:
 - p: [16, 15]
   k: KP SLASH
   l: ['3']
+- p: [53, 63]
+  k: Ctl+$$mdi:apple-keyboard-option$$
+  l: ['0']
