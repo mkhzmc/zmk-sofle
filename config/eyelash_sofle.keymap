@@ -175,10 +175,10 @@
 
         layer_1 {
             bindings = <
-&kp GRAVE        &kp F1           &kp F2           &kp F3           &kp F4           &kp F5             &mmv MOVE_UP     &kp F6                            &kp F7          &kp F8        &kp F9     &kp F10           &trans
-&trans           &kp GRAVE        &mkp LCLK        &mkp MCLK        &mkp RCLK        &mkp MB4           &mmv MOVE_DOWN   &kp PG_UP                         &kp PG_DN       &kp END       &kp HOME   &kp MINUS         &kp EQUAL
-&trans           &kp TILDE        &trans           &trans           &trans           &mkp MB5           &mmv MOVE_LEFT   &kp LEFT_ARROW                    &kp DOWN_ARROW  &kp UP_ARROW  &kp RIGHT  &kp LEFT_BRACKET  &kp RIGHT_BRACKET
-&rgb_ug RGB_TOG  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &rgb_ug RGB_BRI  &rgb_ug RGB_BRD    &mmv MOVE_RIGHT  &rgb_ug RGB_COLOR_HSB(209,81,77)  &kp INSERT      &trans        &kp F11    &kp F12           &trans
+&trans           &kp F1           &kp F2           &kp F3           &kp F4           &kp F5             &mmv MOVE_UP     &kp F6                            &kp F7          &kp F8        &kp F9     &kp F10     &trans
+&trans           &trans           &mkp LCLK        &mkp MCLK        &mkp RCLK        &mkp MB4           &mmv MOVE_DOWN   &kp PG_UP                         &kp PG_DN       &kp HOME      &kp END    &kp INSERT  &trans
+&trans           &trans           &trans           &trans           &trans           &mkp MB5           &mmv MOVE_LEFT   &kp LEFT_ARROW                    &kp DOWN_ARROW  &kp UP_ARROW  &kp RIGHT  &kp DEL     &trans
+&rgb_ug RGB_TOG  &rgb_ug RGB_EFF  &rgb_ug RGB_SPI  &rgb_ug RGB_SPD  &rgb_ug RGB_BRI  &rgb_ug RGB_BRD    &mmv MOVE_RIGHT  &rgb_ug RGB_COLOR_HSB(209,81,77)  &trans          &trans        &trans     &trans      &trans
 &kp C_MUTE       &trans           &trans           &trans           &trans           &trans             &mkp LCLK        &trans                            &trans          &trans        &trans     &trans
             >;
 
