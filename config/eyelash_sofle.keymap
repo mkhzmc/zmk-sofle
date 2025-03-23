@@ -156,6 +156,8 @@
             bindings = <&kp LC(LEFT_ALT)>;
             key-positions = <53 63>;
             layers = <0>;
+            slow-release;
+            timeout-ms = <80>;
         };
     };
 
